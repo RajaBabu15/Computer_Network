@@ -1,599 +1,617 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPv4 Header Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --color-version: #4285F4;
+      --color-ihl: #34A853;
+      --color-tos: #FBBC05;
+      --color-total-length: #EA4335;
+      --color-identification: #8F44AD;
+      --color-flags: #16A085;
+      --color-fragment-offset: #2C3E50;
+      --color-ttl: #D9534F; /* Changed from E74C3C */
+      --color-protocol: #5BC0DE; /* Changed from 3498DB */
+      --color-checksum: #F0AD4E; /* Changed from F39C12 */
+      --color-source-ip: #5CB85C; /* Changed from 27AE60 */
+      --color-destination-ip: #9B59B6;
+      --color-udp-header: #20B2AA;
+      --color-payload: #F08080;
+      --color-background: #f8f9fa;
+      --color-foreground: #212529;
+      --color-border: #dee2e6;
+      --color-white: #ffffff;
+      --color-muted: #6c757d;
+      --font-primary: 'Roboto', Arial, sans-serif;
+      --font-mono: 'Roboto Mono', monospace;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f9f9f9;
-    }
-    .header-container {
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      background-color: white;
+      font-family: var(--font-primary);
+      margin: 0;
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 8px;
+      background-color: var(--color-background);
+      color: var(--color-foreground);
+      line-height: 1.6;
     }
-    .ipv4-header {
-      display: flex;
-      flex-wrap: wrap;
-      border: 2px solid #333;
+
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      background-color: var(--color-white);
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+    }
+
+    h2, h3 {
+      color: var(--color-foreground);
+      border-bottom: 2px solid var(--color-border);
+      padding-bottom: 8px;
+      margin-top: 30px;
       margin-bottom: 20px;
     }
-    .field {
-      text-align: center;
-      padding: 5px;
-      font-size: 12px;
-      color: white;
-      position: relative;
-    }
-    .field-label {
-      font-weight: bold;
-      margin-bottom: 3px;
-    }
-    .field-value {
-      font-family: monospace;
-      font-weight: bold;
-    }
-    .field-bits {
-      font-size: 9px;
-      margin-top: 3px;
-    }
-    .field-explanation {
-      font-size: 10px;
-      margin-top: 3px;
-      font-style: italic;
-    }
-    .version {
-      background-color: #4285F4;
-      flex: 0 0 10%;
-    }
-    .hlen {
-      background-color: #34A853;
-      flex: 0 0 10%;
-    }
-    .tos {
-      background-color: #FBBC05;
-      flex: 0 0 20%;
-      color: black;
-    }
-    .total-length {
-      background-color: #EA4335;
-      flex: 0 0 60%;
-    }
-    .identification {
-      background-color: #8F44AD;
-      flex: 0 0 50%;
-    }
-    .flags {
-      background-color: #16A085;
-      flex: 0 0 10%;
-    }
-    .fragment-offset {
-      background-color: #2C3E50;
-      flex: 0 0 40%;
-    }
-    .ttl {
-      background-color: #E74C3C;
-      flex: 0 0 25%;
-    }
-    .protocol {
-      background-color: #3498DB;
-      flex: 0 0 25%;
-    }
-    .header-checksum {
-      background-color: #F39C12;
-      flex: 0 0 50%;
-      color: black;
-    }
-    .source-ip {
-      background-color: #27AE60;
-      flex: 0 0 100%;
-    }
-    .destination-ip {
-      background-color: #9B59B6;
-      flex: 0 0 100%;
-    }
-    .hex-dump {
-      font-family: monospace;
-      background-color: #f5f5f5;
-      padding: 15px;
-      border-radius: 5px;
-      white-space: pre-wrap;
-    }
-    .hex-display {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #f8f9fa;
-      border-radius: 5px;
-      border: 1px solid #ddd;
-    }
-    .hex-byte {
-      display: inline-block;
-      padding: 3px;
-      margin: 2px;
-      font-family: monospace;
-      border-radius: 3px;
-    }
-    .binary-display {
-      display: block;
-      font-size: 10px;
-      margin-top: 2px;
-      font-family: monospace;
-    }
-    .tos-bits {
-      display: flex;
-      justify-content: space-evenly;
-      margin-top: 8px;
-    }
-    .tos-bit {
-      border: 1px solid #333;
-      padding: 2px 5px;
-      font-size: 10px;
-      background-color: #f9f9f9;
-      color: black;
-    }
-    .bit-value {
-      font-weight: bold;
-    }
-    .flags-bits {
-      display: flex;
-      justify-content: space-evenly;
-      margin-top: 8px;
-    }
-    .flags-bit {
-      border: 1px solid #333;
-      padding: 2px 5px;
-      font-size: 10px;
-      background-color: #f9f9f9;
-      color: black;
-      margin: 0 2px;
-    }
-    .table-container {
-      margin-top: 30px;
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
+
+    /* Packet Structure Diagram */
     .packet-diagram {
       margin: 30px 0;
-      text-align: center;
+      padding: 20px;
+      background-color: #fdfdff;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
     }
     .packet-layer {
       display: flex;
       margin-bottom: 10px;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      overflow: hidden; /* Ensures children respect border-radius */
     }
-    .layer-box {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #333;
-      text-align: center;
+    .layer-label {
+      flex: 0 0 150px; /* Fixed width for label */
+      padding: 10px 15px;
+      background-color: #e9ecef;
+      font-weight: 500;
+      text-align: right;
+      border-right: 1px solid var(--color-border);
+    }
+    .layer-content {
+      flex-grow: 1;
+      padding: 10px 15px;
       font-weight: bold;
+      text-align: center;
     }
-    .eth-header {
-      background-color: #FFD700;
-      color: black;
+    .eth-header { background-color: #fff3cd; color: #856404; }
+    .ip-header { background-color: #cce5ff; color: #004085; }
+    .transport-header { background-color: #d1ecf1; color: #0c5460; }
+    .data-payload { background-color: #f8d7da; color: #721c24; }
+
+
+    /* IPv4 Header Grid Visualization */
+    .ipv4-header-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr); /* 8 columns for 32 bits */
+      grid-template-rows: auto;
+      border: 2px solid #333;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      overflow: hidden; /* Clip children to rounded corners */
+      font-size: 12px;
     }
-    .ip-header {
-      background-color: #6495ED;
-      color: white;
+    .field {
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+      color: var(--color-white); /* Default text color */
+      position: relative;
     }
-    .transport-header {
-      background-color: #20B2AA;
-      color: white;
+    /* Remove border from last element in row/column */
+    .field:nth-child(8n) { border-right: none; }
+    .field:nth-last-child(-n+2) { border-bottom: none; } /* Assuming 5 rows */
+
+    .field-label {
+      font-weight: 700;
+      margin-bottom: 3px;
+      font-size: 11px;
+      text-transform: uppercase;
     }
-    .data-payload {
-      background-color: #F08080;
-      color: black;
+    .field-value {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 13px;
+      word-wrap: break-word;
     }
-    .bit-representation {
-      margin: 20px 0;
-      border: 1px solid #ddd;
-      padding: 10px;
+    .field-bits {
+      font-size: 10px;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+    .field-explanation {
+      font-size: 10px;
+      margin-top: 5px;
+      font-style: italic;
+      opacity: 0.9;
+    }
+
+    /* Spanning grid columns */
+    .span-1 { grid-column: span 1; }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-8 { grid-column: span 8; }
+
+    /* Field specific colors */
+    .version { background-color: var(--color-version); }
+    .ihl { background-color: var(--color-ihl); }
+    .tos { background-color: var(--color-tos); color: var(--color-foreground); }
+    .total-length { background-color: var(--color-total-length); }
+    .identification { background-color: var(--color-identification); }
+    .flags { background-color: var(--color-flags); }
+    .fragment-offset { background-color: var(--color-fragment-offset); }
+    .ttl { background-color: var(--color-ttl); }
+    .protocol { background-color: var(--color-protocol); color: var(--color-foreground);}
+    .header-checksum { background-color: var(--color-checksum); color: var(--color-foreground); }
+    .source-ip { background-color: var(--color-source-ip); }
+    .destination-ip { background-color: var(--color-destination-ip); }
+
+
+    /* Hex Dump Visualization */
+    .hex-display {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f1f3f5;
       border-radius: 5px;
-      background-color: #f9f9f9;
+      border: 1px solid var(--color-border);
+      font-family: var(--font-mono);
+      line-height: 1.8;
+    }
+    .hex-byte {
+      display: inline-block;
+      padding: 3px 5px;
+      margin: 2px;
+      font-size: 13px;
+      border-radius: 3px;
+      color: var(--color-white); /* Default, overridden by specifics */
+      transition: transform 0.1s ease-in-out;
+    }
+    .hex-byte:hover {
+        transform: scale(1.1);
+    }
+    .hex-byte.ip-ver { background-color: var(--color-version); }
+    .hex-byte.ip-ihl { background-color: var(--color-ihl); } /* Same byte as Ver */
+    .hex-byte.ip-tos { background-color: var(--color-tos); color: var(--color-foreground); }
+    .hex-byte.ip-len { background-color: var(--color-total-length); }
+    .hex-byte.ip-id { background-color: var(--color-identification); }
+    .hex-byte.ip-flg { background-color: var(--color-flags); }
+    .hex-byte.ip-off { background-color: var(--color-fragment-offset); } /* Same byte as Flg + next */
+    .hex-byte.ip-ttl { background-color: var(--color-ttl); }
+    .hex-byte.ip-pro { background-color: var(--color-protocol); color: var(--color-foreground); }
+    .hex-byte.ip-chk { background-color: var(--color-checksum); color: var(--color-foreground); }
+    .hex-byte.ip-src { background-color: var(--color-source-ip); }
+    .hex-byte.ip-dst { background-color: var(--color-destination-ip); }
+    .hex-byte.udp-hdr { background-color: var(--color-udp-header); }
+    .hex-byte.payload { background-color: var(--color-payload); color: var(--color-foreground);}
+    .hex-byte.comment { color: var(--color-muted); font-style: italic; background-color: transparent; padding: 0 5px;}
+
+
+    /* Bit Representation */
+    .bit-representation {
+      margin: 30px 0;
+      border: 1px solid var(--color-border);
+      padding: 15px;
+      border-radius: 8px;
+      background-color: var(--color-white);
+      font-family: var(--font-mono);
     }
     .bit-row {
       display: flex;
-      margin: 5px 0;
+      margin-bottom: 3px;
+      align-items: center; /* Align items vertically */
     }
-    .bit-label {
-      width: 120px;
+    .bit-row-label {
+      width: 70px;
+      font-size: 11px;
       font-weight: bold;
-      font-size: 12px;
+      color: var(--color-muted);
+      text-align: right;
+      margin-right: 10px;
     }
-    .bit-squares {
+    .bit-indices, .bit-squares, .bit-field-labels {
       display: flex;
+    }
+    .bit-index, .bit, .bit-field-label {
+      height: 20px;
+      text-align: center;
+      line-height: 20px;
+      margin-right: 1px;
+      font-size: 10px;
+      flex-shrink: 0; /* Prevent shrinking */
+    }
+    .bit-index {
+        width: 20px; /* Match bit width */
+        font-size: 9px;
+        color: var(--color-muted);
     }
     .bit {
       width: 20px;
-      height: 20px;
-      text-align: center;
-      font-size: 10px;
-      line-height: 20px;
-      border: 1px solid #333;
-      margin-right: 1px;
+      border: 1px solid #ccc;
+      font-weight: bold;
     }
-    .bit-0 {
-      background-color: #ECECEC;
+    .bit-0 { background-color: #e9ecef; color: #495057; }
+    .bit-1 { background-color: #cfe2ff; color: #004085; }
+
+    .bit-field-label {
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--color-white);
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 0 5px;
+      border-radius: 3px;
+      margin-top: 5px;
     }
-    .bit-1 {
-      background-color: #AADDFF;
+    .bit-field-label:hover {
+      overflow: visible; /* Show full label on hover if needed */
     }
-    .bit-index {
-      width: 20px;
-      height: 15px;
-      text-align: center;
-      font-size: 8px;
-      line-height: 15px;
+
+    /* Detailed Explanation Table */
+    .table-container {
+      margin-top: 30px;
+      overflow-x: auto; /* Allow horizontal scrolling on small screens */
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--color-border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #e9ecef;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    td:first-child { /* Field name column */
+      font-weight: 500;
+    }
+    td code { /* Style code elements within table */
+      font-family: var(--font-mono);
+      background-color: #e9ecef;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
   </style>
 </head>
 
 <body>
-  <div class="header-container">
-    <h2>Comprehensive IPv4 Header Analysis</h2>
-    
+  <div class="container">
+    <h2>IPv4 Packet Analysis (NTP Example)</h2>
+
     <div class="packet-diagram">
-      <h3>Packet Structure</h3>
+      <h3>Packet Structure Overview</h3>
       <div class="packet-layer">
-        <div class="layer-box eth-header">Ethernet Header</div>
+        <div class="layer-label">Layer 2</div>
+        <div class="layer-content eth-header">Ethernet Header (e.g., MAC Addresses, EtherType)</div>
       </div>
       <div class="packet-layer">
-        <div class="layer-box ip-header">IPv4 Header (20 bytes)</div>
+        <div class="layer-label">Layer 3</div>
+        <div class="layer-content ip-header">IPv4 Header (20 bytes in this case)</div>
       </div>
       <div class="packet-layer">
-        <div class="layer-box transport-header">UDP Header (8 bytes)</div>
+        <div class="layer-label">Layer 4</div>
+        <div class="layer-content transport-header">UDP Header (8 bytes)</div>
       </div>
       <div class="packet-layer">
-        <div class="layer-box data-payload">NTP Payload (48 bytes)</div>
+        <div class="layer-label">Layer 7</div>
+        <div class="layer-content data-payload">NTP Payload (48 bytes)</div>
       </div>
     </div>
-    
-    <h3>IPv4 Header Structure</h3>
-    <div class="ipv4-header">
-      <div class="field version">
+
+    <h3>IPv4 Header Visual Breakdown</h3>
+    <div class="ipv4-header-grid">
+      <!-- Row 1: Version, IHL, ToS, Total Length -->
+      <div class="field version span-1">
         <div class="field-label">Version</div>
         <div class="field-value">4</div>
         <div class="field-bits">4 bits</div>
-        <div class="field-explanation">IPv4 protocol</div>
       </div>
-      <div class="field hlen">
+      <div class="field ihl span-1">
         <div class="field-label">IHL</div>
         <div class="field-value">5</div>
         <div class="field-bits">4 bits</div>
-        <div class="field-explanation">5 × 4 = 20 bytes</div>
+        <div class="field-explanation">20 bytes</div>
       </div>
-      <div class="field tos">
-        <div class="field-label">ToS/DSCP</div>
+      <div class="field tos span-2">
+        <div class="field-label">DSCP/ECN (ToS)</div>
         <div class="field-value">0xB8</div>
         <div class="field-bits">8 bits</div>
-        <div class="tos-bits">
-          <div class="tos-bit">Precedence<br><span class="bit-value">101</span></div>
-          <div class="tos-bit">D<br><span class="bit-value">1</span></div>
-          <div class="tos-bit">T<br><span class="bit-value">1</span></div>
-          <div class="tos-bit">R<br><span class="bit-value">0</span></div>
-          <div class="tos-bit">Unused<br><span class="bit-value">00</span></div>
-        </div>
+        <div class="field-explanation">QoS Marking</div>
       </div>
-      <div class="field total-length">
+      <div class="field total-length span-4">
         <div class="field-label">Total Length</div>
-        <div class="field-value">0x004C (76 bytes)</div>
+        <div class="field-value">0x004C (76)</div>
         <div class="field-bits">16 bits</div>
-        <div class="field-explanation">IP Header (20) + UDP Header (8) + NTP Data (48)</div>
+        <div class="field-explanation">Header+Data</div>
       </div>
-      <div class="field identification">
+
+      <!-- Row 2: Identification, Flags, Fragment Offset -->
+      <div class="field identification span-4">
         <div class="field-label">Identification</div>
         <div class="field-value">0xFDA9 (64937)</div>
         <div class="field-bits">16 bits</div>
-        <div class="field-explanation">Used for reassembling fragments</div>
       </div>
-      <div class="field flags">
+      <div class="field flags span-1">
         <div class="field-label">Flags</div>
-        <div class="field-value">0x4</div>
+        <div class="field-value">DF</div>
         <div class="field-bits">3 bits</div>
-        <div class="flags-bits">
-          <div class="flags-bit">R<br><span class="bit-value">0</span></div>
-          <div class="flags-bit">DF<br><span class="bit-value">1</span></div>
-          <div class="flags-bit">MF<br><span class="bit-value">0</span></div>
-        </div>
+        <div class="field-explanation">010</div>
       </div>
-      <div class="field fragment-offset">
+      <div class="field fragment-offset span-3">
         <div class="field-label">Fragment Offset</div>
         <div class="field-value">0</div>
         <div class="field-bits">13 bits</div>
-        <div class="field-explanation">Position in original datagram (in 8-byte units)</div>
       </div>
-      <div class="field ttl">
+
+      <!-- Row 3: TTL, Protocol, Header Checksum -->
+      <div class="field ttl span-2">
         <div class="field-label">TTL</div>
         <div class="field-value">64</div>
         <div class="field-bits">8 bits</div>
-        <div class="field-explanation">Maximum hop count</div>
       </div>
-      <div class="field protocol">
+      <div class="field protocol span-2">
         <div class="field-label">Protocol</div>
         <div class="field-value">17 (UDP)</div>
         <div class="field-bits">8 bits</div>
-        <div class="field-explanation">Transport protocol</div>
       </div>
-      <div class="field header-checksum">
+      <div class="field header-checksum span-4">
         <div class="field-label">Header Checksum</div>
         <div class="field-value">0x6315</div>
         <div class="field-bits">16 bits</div>
-        <div class="field-explanation">Checksum for header only</div>
+        <div class="field-explanation">[Validation OK]</div>
       </div>
-      <div class="field source-ip">
+
+      <!-- Row 4: Source IP Address -->
+      <div class="field source-ip span-8">
         <div class="field-label">Source IP Address</div>
-        <div class="field-value">172.17.181.96 (0xAC11B560)</div>
+        <div class="field-value">172.17.181.96</div>
         <div class="field-bits">32 bits</div>
       </div>
-      <div class="field destination-ip">
+
+      <!-- Row 5: Destination IP Address -->
+      <div class="field destination-ip span-8">
         <div class="field-label">Destination IP Address</div>
-        <div class="field-value">185.125.190.58 (0xB97DBE3A)</div>
+        <div class="field-value">185.125.190.58</div>
         <div class="field-bits">32 bits</div>
         <div class="field-explanation">prod-ntp-5.ntp1.ps5.canonical.com</div>
       </div>
+      <!-- Options field would go here if IHL > 5 -->
     </div>
-    
-    <h3>Bit-by-Bit Representation of First 32 Bits</h3>
+
+    <h3>Bit-by-Bit Representation (First 64 Bits)</h3>
     <div class="bit-representation">
+      <!-- Bit Indices Row -->
       <div class="bit-row">
-        <div class="bit-label"></div>
+          <div class="bit-row-label">Bit Index</div>
+          <div class="bit-indices">
+            <script>for(let i=0; i<32; i++) document.write(`<div class="bit-index">${i}</div>`);</script>
+          </div>
+      </div>
+      <!-- First 32 bits (Byte 0-3) -->
+      <div class="bit-row">
+        <div class="bit-row-label">Bytes 0-3</div>
         <div class="bit-squares">
-          <div class="bit-index">0</div>
-          <div class="bit-index">1</div>
-          <div class="bit-index">2</div>
-          <div class="bit-index">3</div>
-          <div class="bit-index">4</div>
-          <div class="bit-index">5</div>
-          <div class="bit-index">6</div>
-          <div class="bit-index">7</div>
-          <div class="bit-index">8</div>
-          <div class="bit-index">9</div>
-          <div class="bit-index">10</div>
-          <div class="bit-index">11</div>
-          <div class="bit-index">12</div>
-          <div class="bit-index">13</div>
-          <div class="bit-index">14</div>
-          <div class="bit-index">15</div>
-          <div class="bit-index">16</div>
-          <div class="bit-index">17</div>
-          <div class="bit-index">18</div>
-          <div class="bit-index">19</div>
-          <div class="bit-index">20</div>
-          <div class="bit-index">21</div>
-          <div class="bit-index">22</div>
-          <div class="bit-index">23</div>
-          <div class="bit-index">24</div>
-          <div class="bit-index">25</div>
-          <div class="bit-index">26</div>
-          <div class="bit-index">27</div>
-          <div class="bit-index">28</div>
-          <div class="bit-index">29</div>
-          <div class="bit-index">30</div>
-          <div class="bit-index">31</div>
+          <!-- Byte 0: Ver(4) IHL(5) -> 0100 0101 -->
+          <div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+          <div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-1">1</div>
+          <!-- Byte 1: ToS(B8) -> 1011 1000 -->
+          <div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-1">1</div>
+          <div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+          <!-- Byte 2: Total Length(00) -> 0000 0000 -->
+          <div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+          <div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+          <!-- Byte 3: Total Length(4C) -> 0100 1100 -->
+          <div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+          <div class="bit bit-1">1</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
         </div>
       </div>
+       <!-- Field Labels for First 32 Bits -->
       <div class="bit-row">
-        <div class="bit-label">Byte 0-3</div>
+          <div class="bit-row-label"></div>
+          <div class="bit-field-labels">
+              <div class="bit-field-label" style="width: calc(4 * 21px - 1px); background-color: var(--color-version);">Ver</div>
+              <div class="bit-field-label" style="width: calc(4 * 21px - 1px); background-color: var(--color-ihl);">IHL</div>
+              <div class="bit-field-label" style="width: calc(8 * 21px - 1px); background-color: var(--color-tos); color: black;">DSCP/ECN</div>
+              <div class="bit-field-label" style="width: calc(16 * 21px - 1px); background-color: var(--color-total-length);">Total Length</div>
+          </div>
+      </div>
+
+      <!-- Second 32 bits (Byte 4-7) -->
+       <div class="bit-row" style="margin-top: 15px;"> <!-- Add margin top -->
+        <div class="bit-row-label">Bytes 4-7</div>
         <div class="bit-squares">
-          <!-- Version (4) -->
-          <div class="bit bit-1">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          
-          <!-- IHL (5) -->
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          
-          <!-- ToS (B8) -->
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          
-          <!-- Total Length (004C) -->
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
+            <!-- Byte 4: ID(FD) -> 1111 1101 -->
+            <div class="bit bit-1">1</div><div class="bit bit-1">1</div><div class="bit bit-1">1</div><div class="bit bit-1">1</div>
+            <div class="bit bit-1">1</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-1">1</div>
+            <!-- Byte 5: ID(A9) -> 1010 1001 -->
+            <div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div>
+            <div class="bit bit-1">1</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-1">1</div>
+            <!-- Byte 6: Flags(010) FragOff(00000) -> 0100 0000 -->
+            <div class="bit bit-0">0</div><div class="bit bit-1">1</div><div class="bit bit-0">0</div> <!-- Flags -->
+            <div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div> <!-- Frag Offset (High 5 bits) -->
+            <!-- Byte 7: FragOff(00000000) -> 0000 0000 -->
+            <div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div>
+            <div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div><div class="bit bit-0">0</div> <!-- Frag Offset (Low 8 bits) -->
         </div>
       </div>
-      
-      <div class="bit-row">
-        <div class="bit-label">Fields</div>
-        <div class="bit-squares">
-          <div class="bit-index" style="width: 80px; background-color: #4285F4; color: white;">Version</div>
-          <div class="bit-index" style="width: 80px; background-color: #34A853; color: white;">IHL</div>
-          <div class="bit-index" style="width: 160px; background-color: #FBBC05; color: black;">Type of Service (ToS)</div>
-          <div class="bit-index" style="width: 320px; background-color: #EA4335; color: white;">Total Length</div>
-        </div>
+      <!-- Field Labels for Second 32 Bits -->
+       <div class="bit-row">
+          <div class="bit-row-label"></div>
+          <div class="bit-field-labels">
+              <div class="bit-field-label" style="width: calc(16 * 21px - 1px); background-color: var(--color-identification);">Identification</div>
+              <div class="bit-field-label" style="width: calc(3 * 21px - 1px); background-color: var(--color-flags);">Flags</div>
+              <div class="bit-field-label" style="width: calc(13 * 21px - 1px); background-color: var(--color-fragment-offset);">Fragment Offset</div>
+          </div>
       </div>
     </div>
-    
-    <h3>Bit-by-Bit Representation of Second 32 Bits</h3>
-    <div class="bit-representation">
-      <div class="bit-row">
-        <div class="bit-label"></div>
-        <div class="bit-squares">
-          <div class="bit-index">0</div>
-          <div class="bit-index">1</div>
-          <div class="bit-index">2</div>
-          <div class="bit-index">3</div>
-          <div class="bit-index">4</div>
-          <div class="bit-index">5</div>
-          <div class="bit-index">6</div>
-          <div class="bit-index">7</div>
-          <div class="bit-index">8</div>
-          <div class="bit-index">9</div>
-          <div class="bit-index">10</div>
-          <div class="bit-index">11</div>
-          <div class="bit-index">12</div>
-          <div class="bit-index">13</div>
-          <div class="bit-index">14</div>
-          <div class="bit-index">15</div>
-          <div class="bit-index">16</div>
-          <div class="bit-index">17</div>
-          <div class="bit-index">18</div>
-          <div class="bit-index">19</div>
-          <div class="bit-index">20</div>
-          <div class="bit-index">21</div>
-          <div class="bit-index">22</div>
-          <div class="bit-index">23</div>
-          <div class="bit-index">24</div>
-          <div class="bit-index">25</div>
-          <div class="bit-index">26</div>
-          <div class="bit-index">27</div>
-          <div class="bit-index">28</div>
-          <div class="bit-index">29</div>
-          <div class="bit-index">30</div>
-          <div class="bit-index">31</div>
-        </div>
-      </div>
-      <div class="bit-row">
-        <div class="bit-label">Byte 4-7</div>
-        <div class="bit-squares">
-          <!-- Identification (FDA9) -->
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          
-          <!-- Flags (4) and Fragment Offset (000) -->
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-1">1</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-          <div class="bit bit-0">0</div>
-        </div>
-      </div>
-      
-      <div class="bit-row">
-        <div class="bit-label">Fields</div>
-        <div class="bit-squares">
-          <div class="bit-index" style="width: 320px; background-color: #8F44AD; color: white;">Identification</div>
-          <div class="bit-index" style="width: 60px; background-color: #16A085; color: white;">Flags</div>
-          <div class="bit-index" style="width: 260px; background-color: #2C3E50; color: white;">Fragment Offset</div>
-        </div>
-      </div>
-    </div>
-    
-    <h3>Complete Packet Hex Dump</h3>
+
+
+    <h3>Complete Packet Hex Dump (Color Coded)</h3>
     <div class="hex-display">
-      <!-- IPv4 Header -->
-      <span class="hex-byte" style="background-color: #4285F4; color: white;">45</span>
-      <span class="hex-byte" style="background-color: #FBBC05;">b8</span>
-      <span class="hex-byte" style="background-color: #EA4335; color: white;">00</span>
-      <span class="hex-byte" style="background-color: #EA4335; color: white;">4c</span>
-      <span class="hex-byte" style="background-color: #8F44AD; color: white;">fd</span>
-      <span class="hex-byte" style="background-color: #8F44AD; color: white;">a9</span>
-      <span class="hex-byte" style="background-color: #16A085; color: white;">40</span>
-      <span class="hex-byte" style="background-color: #2C3E50; color: white;">00</span>
-      <span class="hex-byte" style="background-color: #E74C3C; color: white;">40</span>
-      <span class="hex-byte" style="background-color: #3498DB; color: white;">11</span>
-      <span class="hex-byte" style="background-color: #F39C12;">63</span>
-      <span class="hex-byte" style="background-color: #F39C12;">15</span>
-      <span class="hex-byte" style="background-color: #27AE60; color: white;">ac</span>
-      <span class="hex-byte" style="background-color: #27AE60; color: white;">11</span>
-      <span class="hex-byte" style="background-color: #27AE60; color: white;">b5</span>
-      <span class="hex-byte" style="background-color: #27AE60; color: white;">60</span>
-      <span class="hex-byte" style="background-color: #9B59B6; color: white;">b9</span>
-      <span class="hex-byte" style="background-color: #9B59B6; color: white;">7d</span>
-      <span class="hex-byte" style="background-color: #9B59B6; color: white;">be</span>
-      <span class="hex-byte" style="background-color: #9B59B6; color: white;">3a</span>
-      
-      <!-- UDP Header -->
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">e4</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">7c</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">00</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">7b</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">00</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">38</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">d9</span>
-      <span class="hex-byte" style="background-color: #20B2AA; color: white;">73</span>
-      
-      <!-- NTP Payload (showing just the first bytes) -->
-      <span class="hex-byte" style="background-color: #F08080;">23</span>
-      <span class="hex-byte" style="background-color: #F08080;">00</span>
-      <span class="hex-byte" style="background-color: #F08080;">00</span>
-      <span class="hex-byte" style="background-color: #F08080;">00</span>
-      <span class="hex-byte" style="background-color: #F08080;">...</span>
+      <span class="hex-byte comment">[IPv4 Header - 20 bytes]</span><br>
+      <span class="hex-byte ip-ver ip-ihl" title="Version & IHL">45</span>
+      <span class="hex-byte ip-tos" title="DSCP/ECN (ToS)">b8</span>
+      <span class="hex-byte ip-len" title="Total Length">00</span>
+      <span class="hex-byte ip-len" title="Total Length">4c</span>
+      <span class="hex-byte ip-id" title="Identification">fd</span>
+      <span class="hex-byte ip-id" title="Identification">a9</span>
+      <span class="hex-byte ip-flg ip-off" title="Flags & Fragment Offset">40</span>
+      <span class="hex-byte ip-off" title="Fragment Offset">00</span>
+      <span class="hex-byte ip-ttl" title="Time To Live">40</span>
+      <span class="hex-byte ip-pro" title="Protocol (UDP)">11</span>
+      <span class="hex-byte ip-chk" title="Header Checksum">63</span>
+      <span class="hex-byte ip-chk" title="Header Checksum">15</span>
+      <span class="hex-byte ip-src" title="Source IP">ac</span>
+      <span class="hex-byte ip-src" title="Source IP">11</span>
+      <span class="hex-byte ip-src" title="Source IP">b5</span>
+      <span class="hex-byte ip-src" title="Source IP">60</span>
+      <span class="hex-byte ip-dst" title="Destination IP">b9</span>
+      <span class="hex-byte ip-dst" title="Destination IP">7d</span>
+      <span class="hex-byte ip-dst" title="Destination IP">be</span>
+      <span class="hex-byte ip-dst" title="Destination IP">3a</span><br>
+      <span class="hex-byte comment">[UDP Header - 8 bytes]</span><br>
+      <span class="hex-byte udp-hdr" title="UDP Source Port">e4</span>
+      <span class="hex-byte udp-hdr" title="UDP Source Port">7c</span>
+      <span class="hex-byte udp-hdr" title="UDP Dest Port (NTP)">00</span>
+      <span class="hex-byte udp-hdr" title="UDP Dest Port (NTP)">7b</span>
+      <span class="hex-byte udp-hdr" title="UDP Length">00</span>
+      <span class="hex-byte udp-hdr" title="UDP Length">38</span>
+      <span class="hex-byte udp-hdr" title="UDP Checksum">d9</span>
+      <span class="hex-byte udp-hdr" title="UDP Checksum">73</span><br>
+      <span class="hex-byte comment">[NTP Payload - 48 bytes]</span><br>
+      <span class="hex-byte payload">23</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span>
+      <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span>
+      <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span>
+      <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span>
+      <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">0b</span> <span class="hex-byte payload">9f</span> <span class="hex-byte payload">5f</span> <span class="hex-byte payload">12</span>
+      <span class="hex-byte payload">06</span> <span class="hex-byte payload">62</span> <span class="hex-byte payload">3b</span> <span class="hex-byte payload">0b</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <span class="hex-byte payload">00</span> <!-- Adjusted padding to show 48 bytes -->
     </div>
-    
+
     <div class="table-container">
       <h3>IPv4 Header Fields Detailed Explanation</h3>
       <table>
-        <tr>
-          <th>Field</th>
-          <th>Size</th>
-          <th>Value in Packet</th>
-          <th>Detailed Description</th>
-        </tr>
-        <tr>
-          <td>Version</td>
-          <td>4 bits</td>
-          <td>4</td>
-          <td>Indicates IPv4 protocol version. The first 4 bits of the first byte (0x45).</td>
-        </tr>
-        <tr>
-          <td>HLEN (IHL)</td>
-          <td>4 bits</td>
-          <td>5 (20 bytes)</td>
-          <td>Internet Header Length in 32
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>Size</th>
+            <th>Value (from Packet)</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Version</td>
+            <td>4 bits</td>
+            <td><code>4</code></td>
+            <td>Indicates the Internet Protocol version. <code>4</code> signifies IPv4.</td>
+          </tr>
+          <tr>
+            <td>Internet Header Length (IHL)</td>
+            <td>4 bits</td>
+            <td><code>5</code></td>
+            <td>Length of the IP header in 32-bit words (4-byte units). Minimum value is 5 (20 bytes). Max is 15 (60 bytes). Here, <code>5</code> means 5 * 4 = 20 bytes.</td>
+          </tr>
+          <tr>
+            <td>Differentiated Services / ToS</td>
+            <td>8 bits</td>
+            <td><code>0xB8</code></td>
+            <td>Used for Quality of Service (QoS). Divided into DSCP (Differentiated Services Code Point - first 6 bits) and ECN (Explicit Congestion Notification - last 2 bits). <code>0xB8</code> (<code>10111000</code>) indicates specific priority/congestion handling.</td>
+          </tr>
+          <tr>
+            <td>Total Length</td>
+            <td>16 bits</td>
+            <td><code>0x004C</code> (76)</td>
+            <td>Total length of the entire IP datagram (header + data) in bytes. Maximum size is 65,535 bytes. Here, 76 bytes = 20 (IP Hdr) + 8 (UDP Hdr) + 48 (NTP Data).</td>
+          </tr>
+          <tr>
+            <td>Identification</td>
+            <td>16 bits</td>
+            <td><code>0xFDA9</code> (64937)</td>
+            <td>Identifier assigned by the sender, used primarily for reassembling fragmented packets. All fragments of a single datagram share the same ID.</td>
+          </tr>
+          <tr>
+            <td>Flags</td>
+            <td>3 bits</td>
+            <td><code>010</code> (DF=1)</td>
+            <td>Control flags related to fragmentation:
+                <ul>
+                    <li>Bit 0: Reserved (must be 0).</li>
+                    <li>Bit 1: DF (Don't Fragment). <code>1</code> = Packet cannot be fragmented. <code>0</code> = Can be fragmented. (This packet has DF=1).</li>
+                    <li>Bit 2: MF (More Fragments). <code>1</code> = More fragments follow this one. <code>0</code> = This is the last/only fragment. (This packet has MF=0).</li>
+                </ul>
+            </td>
+          </tr>
+          <tr>
+            <td>Fragment Offset</td>
+            <td>13 bits</td>
+            <td><code>0</code></td>
+            <td>Specifies the position of this fragment's data relative to the beginning of the original datagram's data, measured in 8-byte units. <code>0</code> indicates this is the first fragment or the packet is unfragmented.</td>
+          </tr>
+          <tr>
+            <td>Time To Live (TTL)</td>
+            <td>8 bits</td>
+            <td><code>64</code> (0x40)</td>
+            <td>Limits the packet's lifespan. Decremented by at least 1 by each router. If it reaches 0, the packet is discarded to prevent routing loops. Initial value varies by OS.</td>
+          </tr>
+          <tr>
+            <td>Protocol</td>
+            <td>8 bits</td>
+            <td><code>17</code> (0x11)</td>
+            <td>Identifies the next-level protocol contained within the IP packet's data payload. Common values: <code>1</code> (ICMP), <code>6</code> (TCP), <code>17</code> (UDP). This packet carries UDP.</td>
+          </tr>
+          <tr>
+            <td>Header Checksum</td>
+            <td>16 bits</td>
+            <td><code>0x6315</code></td>
+            <td>An error-checking checksum calculated over the IP header fields only. It must be recomputed by routers if they modify the header (e.g., decrement TTL).</td>
+          </tr>
+          <tr>
+            <td>Source IP Address</td>
+            <td>32 bits</td>
+            <td><code>172.17.181.96</code></td>
+            <td>The IPv4 address of the original sender of the packet.</td>
+          </tr>
+          <tr>
+            <td>Destination IP Address</td>
+            <td>32 bits</td>
+            <td><code>185.125.190.58</code></td>
+            <td>The IPv4 address of the final intended recipient of the packet.</td>
+          </tr>
+          <tr>
+            <td>Options</td>
+            <td>Variable (0-40 bytes)</td>
+            <td><i>None in this packet</i></td>
+            <td>Optional fields used for control, debugging, or security. Only present if IHL > 5. Padded with zeros to ensure the header ends on a 32-bit boundary.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div> <!-- /container -->
+</body>
+</html>
